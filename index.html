@@ -351,9 +351,9 @@ function openView(id) {
   const k = weekDays().indexOf(b.date);
   showDlg(titleOf(b), `${DAYS[k]} ${dm(b.date)} · ${span(b)}`, `
     <div class="info"><b>${esc(b.dept) || "—"}</b><span>${esc(b.name) || "—"}</span>${b.note ? `<span>${esc(b.note)}</span>` : ""}</div>
-    ${b.cancellable ? `<div class="fld"><label for="c-pin">PIN-код, щоб скасувати</label><input id="c-pin" inputmode="numeric" maxlength="4" autocomplete="off">
-      <span class="hint">Скасувати може лише той, хто бронював.</span></div>` : '<span class="hint">Це бронювання внесено адміністратором — скасувати його може лише він.</span>'}`,
-    b.cancellable ? `<button class="btn danger" data-act="cancel" data-busy>Скасувати бронювання</button>` : "", colorOf(b));
+    <div class="fld"><label for="c-pin">${b.cancellable ? "PIN-код, щоб скасувати" : "Код адміністратора, щоб скасувати"}</label><input id="c-pin" type="password" maxlength="40" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <span class="hint">${b.cancellable ? "Скасувати може той, хто бронював, або адміністратор своїм кодом." : "Це бронювання внесено адміністратором — скасувати його може лише він."}</span></div>`,
+    `<button class="btn danger" data-act="cancel" data-busy>Скасувати бронювання</button>`, colorOf(b));
 }
 function showDlg(title, sub, body, action, color) {
   $("#modal").innerHTML = `<div class="scrim"><div class="dlg" role="dialog" aria-modal="true" aria-label="${esc(title)}">
@@ -379,7 +379,7 @@ function submit() {
 }
 function cancelBooking() {
   const pin = $("#c-pin").value.trim();
-  if (!/^\d{4}$/.test(pin)) return dlgErr("Введіть PIN-код із 4 цифр.");
+  if (!pin) return dlgErr("Введіть PIN-код.");
   setBusy(true);
   call("cancel", { id: S.dlg.id, pin, from: S.from })
     .then(st => { closeDlg(); apply(st); toast("Бронювання скасовано"); })
@@ -402,7 +402,7 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("submit", e => { if (e.target.id === "login") login(e); });
 document.addEventListener("change", e => { if (e.target.id === "b-type") durOptions(); });
-document.addEventListener("input", e => { if (e.target.id === "b-pin" || e.target.id === "c-pin") e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4); });
+document.addEventListener("input", e => { if (e.target.id === "b-pin") e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4); });
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && S.dlg) closeDlg();
   if (e.key === "Enter" && S.dlg && e.target.tagName === "INPUT") { e.preventDefault(); S.dlg.mode === "new" ? submit() : cancelBooking(); }
