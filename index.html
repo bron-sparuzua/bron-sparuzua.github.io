@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Бронювання конференц-залу</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800&family=Unbounded:wght@600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+:root{
+  --bg:#F2F5F3; --surface:#FFFFFF; --surface-2:#F5F8F6; --ink:#122019; --muted:#56655D; --line:#DCE4DF;
+  --brand:#00843D; --brand-2:#006B31; --brand-ink:#FFFFFF; --brand-soft:#DDF3E5;
+  --hot:#E30613; --hot-soft:#FFE3E5;
+  --free-hover:#E3F6EA; --past:#EEF1EF;
+  --err:#9B1C1C; --err-soft:#FDE2E2; --danger:#C81E1E;
+  --shadow:0 12px 32px rgba(10,40,24,.16);
+  --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0E1512; --surface:#16201B; --surface-2:#1B2721; --ink:#E6EEE9; --muted:#97A89F; --line:#2A3831;
+  --brand:#16A34A; --brand-2:#15803D; --brand-ink:#FFFFFF; --brand-soft:#173A26;
+  --hot:#FF4D57; --hot-soft:#3D1518; --free-hover:#1C3326; --past:#131B17;
+  --err:#FCA5A5; --err-soft:#3D1518; --danger:#F87171; --shadow:0 12px 32px rgba(0,0,0,.5); color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+button:disabled{cursor:default}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.mono{font-family:var(--f-mono);font-size:12px}
+
+/* шапка */
+.top{position:sticky;top:0;z-index:20;background:var(--brand);color:var(--brand-ink);box-shadow:0 2px 10px rgba(0,60,28,.25)}
+.top-in{display:flex;align-items:center;gap:10px 16px;padding-block:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px;margin-right:auto}
+.brand-mark{width:38px;height:38px;border-radius:10px;background:#FFFFFF;color:var(--brand);display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:14px}
+.brand b{font-family:var(--f-display);font-weight:700;font-size:17px;letter-spacing:.01em}
+.brand small{display:block;font-size:12.5px;opacity:.9}
+.nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.nav b{min-width:190px;text-align:center;font-size:15px;font-weight:700}
+.ib{min-width:44px;height:44px;border:0;background:rgba(255,255,255,.16);color:inherit;border-radius:10px;font-size:18px;font-weight:700}
+.ib:hover{background:rgba(255,255,255,.28)}
+.top .btn{background:#FFFFFF;color:var(--brand-2);border-color:#FFFFFF}
+.btn{height:44px;padding:0 16px;border:1px solid var(--line);background:var(--surface);border-radius:10px;font-weight:700}
+.btn.pri{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.btn.pri:hover{background:var(--brand-2)}
+.btn.danger{color:#FFFFFF;background:var(--danger);border-color:var(--danger)}
+.btn[disabled]{opacity:.55;cursor:progress}
+
+main{padding-block:22px 60px}
+h1{font-family:var(--f-display);font-weight:700;font-size:21px;margin:0 0 4px}
+h2{font-size:16px;margin:0 0 10px}
+.sub{color:var(--muted);margin:0}
+.cols{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.cal{flex:999 1 560px;min-width:0}
+.side{flex:1 1 270px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px 20px;flex-wrap:wrap;margin-bottom:12px}
+.legend{display:flex;gap:6px;flex-wrap:wrap}
+.tag{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;color:#FFFFFF;background:var(--tc)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.panel ol{margin:0;padding-left:18px;color:var(--muted);font-size:13px;display:grid;gap:6px}
+.tlist{display:grid;gap:8px}
+.tlist div{display:flex;gap:10px;align-items:stretch;background:var(--surface-2);border-radius:10px;padding:8px 10px 8px 0;overflow:hidden}
+.tlist i{width:5px;border-radius:0 4px 4px 0;background:var(--tc);flex:none}
+.tlist .mono{padding-top:1px;white-space:nowrap}
+.tlist b{display:block;font-size:13px;overflow-wrap:anywhere}
+.tlist small{color:var(--muted);font-size:12.5px;overflow-wrap:anywhere}
+.empty{color:var(--muted);font-size:13px}
+
+/* сітка тижня */
+.grid-box{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 3px rgba(10,40,24,.06)}
+.grid{min-width:640px}
+.grow{display:grid;grid-template-columns:64px repeat(5,minmax(0,1fr))}
+.grow.h{background:var(--surface-2);border-bottom:1px solid var(--line)}
+.dh{padding:9px 10px;border-left:1px solid var(--line)}
+.dh b{font-size:14px}
+.dh span{color:var(--muted);font-size:12.5px;margin-left:4px}
+.dh.today{background:var(--brand-soft)}
+.dh.today em{font-style:normal;font-size:11px;font-weight:800;color:#FFFFFF;background:var(--hot);border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:1px}
+.tl{height:44px;padding:4px 10px 0 0;text-align:right;color:var(--muted);border-top:1px solid var(--line)}
+.c{height:44px;min-width:0;border:0;border-left:1px solid var(--line);border-top:1px solid var(--line);background:transparent;padding:0;display:block}
+.c.free:hover{background:var(--free-hover)}
+.c.free:hover::after{content:"+";display:grid;place-items:center;height:100%;color:var(--brand);font-weight:800;font-size:18px}
+.c.past{background:var(--past)}
+.c.busy{position:relative;border-top-color:transparent}
+.blk{position:absolute;left:3px;right:3px;top:2px;z-index:1;border-radius:8px;background:var(--tc);color:#FFFFFF;padding:5px 8px;text-align:left;display:flex;flex-direction:column;gap:1px;overflow:hidden;box-shadow:0 2px 6px rgba(0,0,0,.18)}
+.blk span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25}
+.blk .t{font-weight:800;font-size:12.5px}
+.blk .s{font-size:11.5px;opacity:.95}
+.blk.past{filter:saturate(.3) brightness(.92);box-shadow:none}
+.c.busy:hover .blk{filter:brightness(1.08)}
+
+/* телефон: один день списком */
+.chips{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-bottom:14px}
+.chip{height:56px;border:1px solid var(--line);background:var(--surface);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative}
+.chip b{font-size:13px}
+.chip span{font-size:12px;color:var(--muted)}
+.chip.on{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.chip.on span{color:inherit}
+.chip.today::after{content:"";position:absolute;top:6px;right:8px;width:7px;height:7px;border-radius:50%;background:var(--hot)}
+.dlist{display:grid;gap:6px}
+.r{min-height:48px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:6px 12px;display:flex;align-items:center;gap:12px;text-align:left;width:100%}
+.r .tm{width:44px;flex:none}
+.r .mid{min-width:0;flex:1}
+.r .mid b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r .mid small{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.r .cta{font-size:12.5px;font-weight:800;color:var(--brand);flex:none}
+.r.busy{background:var(--tc);color:#FFFFFF;border-color:transparent;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.r.busy.past{filter:saturate(.3) brightness(.92);box-shadow:none}
+.r.past{background:var(--past);color:var(--muted);border-color:transparent}
+
+/* вікна */
+.scrim{position:fixed;inset:0;background:rgba(8,24,15,.45);display:grid;place-items:center;padding:16px;z-index:40}
+.dlg{width:min(460px,100%);max-height:100%;overflow:auto;background:var(--surface);border-radius:16px;box-shadow:var(--shadow);display:grid}
+.dlg-h{display:flex;align-items:flex-start;gap:10px;padding:16px 18px;background:var(--hc,var(--brand));color:#FFFFFF}
+.dlg-h div{margin-right:auto;min-width:0}
+.dlg-h .mono{opacity:.9}
+.dlg-h h2{font-size:18px;margin:2px 0 0;overflow-wrap:anywhere}
+.dlg-h .ib{background:rgba(255,255,255,.2)}
+.dlg-b{padding:16px 18px 18px;display:grid;gap:14px}
+.fld{display:grid;gap:5px;min-width:0}
+.fld label{font-weight:700;font-size:13px}
+.fld input,.fld select{height:44px;width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
+.fld input:focus,.fld select:focus{border-color:var(--brand);outline:none;box-shadow:0 0 0 3px var(--brand-soft)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.req::after{content:" *";color:var(--danger)}
+.hint{font-size:12px;color:var(--muted)}
+.info{border-radius:12px;padding:12px;background:var(--surface-2);display:grid;gap:4px}
+.info b{overflow-wrap:anywhere}
+.info span{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.err{background:var(--err-soft);color:var(--err);border-radius:10px;padding:9px 11px;font-size:13px;font-weight:500}
+.acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+
+/* вхід */
+.gate{max-width:420px;margin:9vh auto;background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow)}
+.gate-h{background:var(--brand);color:#FFFFFF;padding:22px 24px;display:flex;gap:14px;align-items:center}
+.gate-h b{font-family:var(--f-display);font-size:18px;font-weight:700}
+.gate-h small{display:block;opacity:.9}
+.gate-b{padding:22px 24px;display:grid;gap:14px}
+
+.busybar{position:fixed;top:0;left:0;right:0;height:3px;z-index:70;background:linear-gradient(90deg,transparent,#FFFFFF,transparent);background-size:200% 100%;animation:bar 1s linear infinite}
+@keyframes bar{from{background-position:200% 0}to{background-position:-200% 0}}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:12px;z-index:60;font-weight:600;max-width:calc(100% - 32px)}
+@media (max-width:640px){.brand small{display:none}.nav{width:100%}.nav b{flex:1;min-width:0}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="busy" class="busybar" hidden></div>
+<header class="top">
+  <div class="wrap top-in">
+    <div class="brand"><div class="brand-mark" aria-hidden="true">КЗ</div><div><b>Конференц-зал</b><small>Бронювання часу · SPAR</small></div></div>
+    <div class="nav" id="nav" hidden>
+      <button class="ib" id="prev" aria-label="Попередній тиждень">‹</button>
+      <b id="weekLabel"></b>
+      <button class="ib" id="next" aria-label="Наступний тиждень">›</button>
+      <button class="btn" id="thisWeek">Сьогодні</button>
+    </div>
+  </div>
+</header>
+<main class="wrap" id="app"></main>
+<div id="modal"></div>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script>
+// Адреса веб-застосунку Apps Script (закінчується на /exec)
+const API_URL = "https://script.google.com/macros/s/AKfycbx6ZyK6vkOuwqG2coqrZZgsm8pVf6cx9XEULHQpET7649UhvP5VZtj0At9ZHg1RXuEzWQ/exec";
+
+const DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт"];
+const DAYS_FULL = ["Понеділок", "Вівторок", "Середа", "Четвер", "Пʼятниця"];
+const MONTHS = ["січня", "лютого", "березня", "квітня", "травня", "червня", "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"];
+const OTHER_COLOR = "#475569"; // для бронювань, внесених вручну з невідомим типом
+
+const S = { cfg: { startMin: 540, endMin: 1080, slot: 30 }, types: [], depts: [], now: null, from: "", bookings: [], today: [], day: "", dlg: null, busy: 0, loaded: false };
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pad = n => String(n).padStart(2, "0");
+const utc = ymd => { const a = ymd.split("-").map(Number); return Date.UTC(a[0], a[1] - 1, a[2]); };
+const addDays = (ymd, n) => new Date(utc(ymd) + n * 864e5).toISOString().slice(0, 10);
+const dow = ymd => new Date(utc(ymd)).getUTCDay();
+const dm = ymd => ymd.slice(8, 10) + "." + ymd.slice(5, 7);
+const localToday = () => { const d = new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); };
+/** Понеділок тижня, який показуємо за замовчуванням: у вихідні — вже наступний. */
+const weekOf = ymd => { const w = dow(ymd); const base = w === 6 ? addDays(ymd, 2) : w === 0 ? addDays(ymd, 1) : ymd; return addDays(base, -((dow(base) + 6) % 7)); };
+const slots = () => Math.round((S.cfg.endMin - S.cfg.startMin) / S.cfg.slot);
+const tm = i => { const m = S.cfg.startMin + i * S.cfg.slot; return pad(Math.floor(m / 60)) + ":" + pad(m % 60); };
+const span = b => tm(b.start) + "–" + tm(b.start + b.len);
+const durLabel = n => { const m = n * S.cfg.slot, h = Math.floor(m / 60), r = m % 60; return (h ? h + " год" : "") + (h && r ? " " : "") + (r ? r + " хв" : ""); };
+const typeOf = b => S.types.find(t => t.id === b.typeId);
+const colorOf = b => { const t = typeOf(b); return t ? t.color : OTHER_COLOR; };
+const isMobile = () => window.matchMedia("(max-width:640px)").matches;
+const store = {
+  get(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) { } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) { } }
+};
+
+function toast(t) { const el = $("#toast"); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 3200); }
+function setBusy(on) { S.busy += on ? 1 : -1; $("#busy").hidden = S.busy <= 0; document.querySelectorAll("[data-busy]").forEach(b => b.disabled = S.busy > 0); }
+
+function call(action, payload, key) {
+  return fetch(API_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ key: key || store.get("kz_key"), action, payload: payload || {} }) })
+    .then(r => r.text(), () => { throw new Error("Немає зв'язку з сервером. Перевірте інтернет і спробуйте ще раз."); })
+    .then(t => { let o; try { o = JSON.parse(t); } catch (e) { throw new Error("Сервер відповів не так, як очікувалось. Зверніться до адміністратора."); } if (!o.ok) throw new Error(o.error); return o.data; });
+}
+function apply(d) {
+  S.now = d.now; S.cfg = d.cfg; S.types = d.types; S.depts = d.depts; S.bookings = d.bookings; S.today = d.today; S.loaded = true;
+  const days = weekDays();
+  if (days.indexOf(S.day) < 0) S.day = days.indexOf(S.now.date) >= 0 ? S.now.date : days[0];
+  render();
+}
+function load(quiet) {
+  if (!quiet) setBusy(true);
+  return call("week", { from: S.from }).then(apply).catch(e => {
+    if (e.message === "NO_ACCESS") return showLogin("Пароль змінився — введіть новий.");
+    if (!quiet) { if (!S.loaded) gate("Не вдалося завантажити розклад", e.message); else toast(e.message); }
+  }).finally(() => { if (!quiet) setBusy(false); });
+}
+function gate(title, text) {
+  $("#app").innerHTML = `<div class="gate"><div class="gate-h"><div class="brand-mark" aria-hidden="true">КЗ</div><div><b>${esc(title)}</b></div></div>
+    <div class="gate-b"><p class="sub">${esc(text)}</p><div><button class="btn pri" data-act="retry">Спробувати ще раз</button></div></div></div>`;
+}
+
+/* ---------- вхід за паролем ---------- */
+function showLogin(msg) {
+  store.del("kz_key"); S.loaded = false; closeDlg(); $("#nav").hidden = true;
+  $("#app").innerHTML = `<form class="gate" id="login" novalidate><div class="gate-h"><div class="brand-mark" aria-hidden="true">КЗ</div><div><b>Конференц-зал</b><small>Бронювання часу</small></div></div>
+    <div class="gate-b"><div class="fld"><label for="l-pass">Пароль для входу</label><input id="l-pass" type="password" autocomplete="current-password" required></div>
+    <div class="err" id="l-err" role="alert" ${msg ? "" : "hidden"}>${esc(msg || "")}</div>
+    <button class="btn pri" type="submit" data-busy>Увійти</button>
+    <span class="hint">Пароль знають працівники компанії. Браузер запам'ятає вхід.</span></div></form>`;
+  $("#l-pass").focus();
+}
+function login(e) {
+  e.preventDefault();
+  const key = $("#l-pass").value.trim(), err = $("#l-err");
+  if (!key) { err.textContent = "Введіть пароль."; err.hidden = false; return; }
+  setBusy(true);
+  call("week", { from: S.from }, key)
+    .then(d => { store.set("kz_key", key); $("#nav").hidden = false; apply(d); })
+    .catch(x => { err.textContent = x.message === "NO_ACCESS" ? "Невірний пароль." : x.message; err.hidden = false; $("#l-pass").select(); })
+    .finally(() => setBusy(false));
+}
+
+/* ---------- розрахунки ---------- */
+const weekDays = () => [0, 1, 2, 3, 4].map(n => addDays(S.from, n));
+const bookingAt = (date, i) => S.bookings.find(b => b.date === date && i >= b.start && i < b.start + b.len);
+const isPast = (date, i) => !!S.now && (date < S.now.date || (date === S.now.date && S.cfg.startMin + (i + 1) * S.cfg.slot <= S.now.min));
+/** Скільки слотів поспіль вільно, починаючи з i. */
+function freeRun(date, i, max) { let n = 0; while (n < max && i + n < slots() && !bookingAt(date, i + n)) n++; return n; }
+function weekLabel() {
+  const a = new Date(utc(S.from)), z = new Date(utc(addDays(S.from, 4)));
+  return a.getUTCMonth() === z.getUTCMonth()
+    ? a.getUTCDate() + "–" + z.getUTCDate() + " " + MONTHS[a.getUTCMonth()] + " " + z.getUTCFullYear()
+    : a.getUTCDate() + " " + MONTHS[a.getUTCMonth()] + " – " + z.getUTCDate() + " " + MONTHS[z.getUTCMonth()] + " " + z.getUTCFullYear();
+}
+const titleOf = b => b.type || "Зустріч";
+const whoOf = b => [b.dept, b.name].filter(Boolean).join(" · ");
+
+/* ---------- екран ---------- */
+function render() {
+  $("#weekLabel").textContent = weekLabel();
+  if (!S.loaded) return;
+  $("#nav").hidden = false;
+  const days = weekDays(), n = slots();
+  const todayHtml = S.today.length
+    ? `<div class="tlist">${S.today.map(b => `<div style="--tc:${colorOf(b)}"><i></i><span class="mono">${span(b)}</span><span><b>${esc(titleOf(b))}</b><small>${esc(whoOf(b))}</small></span></div>`).join("")}</div>`
+    : `<span class="empty">На сьогодні бронювань немає</span>`;
+  const legend = `<div class="legend" aria-label="Типи зустрічей">${S.types.map(t => `<span class="tag" style="--tc:${t.color}">${esc(t.name)}</span>`).join("")}</div>`;
+  let cal;
+  if (isMobile()) {
+    const d = S.day, di = days.indexOf(d);
+    let rows = "";
+    for (let i = 0; i < n; i++) {
+      const b = bookingAt(d, i), past = isPast(d, i);
+      if (b) { if (b.start === i) rows += `<button class="r busy ${past ? "past" : ""}" data-id="${esc(b.id)}" style="--tc:${colorOf(b)};min-height:${48 * b.len + 6 * (b.len - 1)}px"><span class="mono tm">${tm(i)}</span><span class="mid"><b>${esc(titleOf(b))}</b><small>${esc(whoOf(b))} · ${span(b)}</small></span></button>`; }
+      else if (past) rows += `<button class="r past" disabled><span class="mono tm">${tm(i)}</span><span class="mid"><b>Час минув</b></span></button>`;
+      else rows += `<button class="r" data-d="${d}" data-i="${i}"><span class="mono tm">${tm(i)}</span><span class="mid"><b>Вільно</b></span><span class="cta">Забронювати</span></button>`;
+    }
+    cal = `<nav class="chips" aria-label="День тижня">${days.map((x, k) => `<button class="chip ${x === d ? "on" : ""} ${x === S.now.date ? "today" : ""}" data-day="${x}" ${x === d ? 'aria-current="date"' : ""}><b>${DAYS[k]}</b><span>${x.slice(8, 10)}</span></button>`).join("")}</nav>
+      <h1 style="font-size:17px;margin-bottom:10px">${DAYS_FULL[di]}, ${dm(d)}${d === S.now.date ? " · сьогодні" : ""}</h1>
+      <div style="margin-bottom:12px">${legend}</div>
+      <div class="dlist">${rows}</div>`;
+  } else {
+    let g = `<div class="grow h"><div></div>${days.map((x, k) => `<div class="dh ${x === S.now.date ? "today" : ""}"><b>${DAYS[k]}</b><span>${dm(x)}</span>${x === S.now.date ? "<em>сьогодні</em>" : ""}</div>`).join("")}</div>`;
+    for (let i = 0; i < n; i++) {
+      g += `<div class="grow"><div class="tl mono">${tm(i)}</div>`;
+      days.forEach((x, k) => {
+        const b = bookingAt(x, i), past = isPast(x, i);
+        if (b) {
+          const first = b.start === i, h = 44 * b.len - 4;
+          g += `<button class="c busy" data-id="${esc(b.id)}" aria-label="${esc(titleOf(b))}: ${DAYS[k]} ${dm(x)}, ${span(b)}, ${esc(whoOf(b))}" ${first ? "" : 'tabindex="-1"'}>${first ? `<span class="blk ${isPast(x, b.start + b.len - 1) ? "past" : ""}" style="--tc:${colorOf(b)};height:${h}px"><span class="t">${esc(titleOf(b))}</span><span class="s">${span(b)}${b.len > 1 ? "" : " · " + esc(b.dept)}</span>${b.len > 1 ? `<span class="s">${esc(whoOf(b))}</span>` : ""}</span>` : ""}</button>`;
+        }
+        else if (past) g += `<button class="c past" disabled aria-label="Час минув: ${DAYS[k]} ${dm(x)}, ${tm(i)}"></button>`;
+        else g += `<button class="c free" data-d="${x}" data-i="${i}" aria-label="Вільно: ${DAYS[k]} ${dm(x)}, ${tm(i)} — забронювати"></button>`;
+      });
+      g += `</div>`;
+    }
+    cal = `<div class="head"><div><h1>Оберіть вільний час</h1><p class="sub">Натисніть на порожню клітинку — відкриється форма бронювання.</p></div>${legend}</div>
+      <div class="grid-box"><div class="grid">${g}</div></div>`;
+  }
+  const y = window.scrollY;
+  $("#app").innerHTML = `<div class="cols"><section class="cal" aria-label="Розклад залу">${cal}</section>
+    <aside class="side"><div class="panel"><h2>Сьогодні в залі</h2>${todayHtml}</div>
+    <div class="panel"><h2>Як це працює</h2><ol><li>Натисніть вільний час і оберіть департамент та тип зустрічі.</li><li>Придумайте PIN-код із 4 цифр — він потрібен, щоб скасувати бронювання.</li><li>Зайнятий час забронювати неможливо: система перевіряє це під час запису.</li></ol></div></aside></div>`;
+  if (y) window.scrollTo(0, y);
+}
+
+/* ---------- вікно бронювання ---------- */
+function durOptions() {
+  const d = S.dlg, t = S.types.find(x => x.id === $("#b-type").value);
+  const max = freeRun(d.date, d.i, t ? t.maxSlots : 4), cur = Number($("#b-dur").value) || 2;
+  const opts = []; for (let n = 1; n <= max; n++) opts.push(`<option value="${n}" ${n === Math.min(cur, max) ? "selected" : ""}>${durLabel(n)} (до ${tm(d.i + n)})</option>`);
+  $("#b-dur").innerHTML = opts.join("");
+  const tip = $("#dur-hint");
+  if (t) tip.textContent = max < t.maxSlots ? `Далі зал зайнятий або закінчується робочий день, тому довше ${durLabel(max)} не вийде.` : `«${t.name}» — до ${durLabel(t.maxSlots)}.`;
+  else tip.textContent = "";
+  const h = $(".dlg-h"); if (h) h.style.setProperty("--hc", t ? t.color : "var(--brand)");
+}
+function openNew(date, i) {
+  if (!freeRun(date, i, 1)) return;
+  S.dlg = { mode: "new", date, i };
+  const k = weekDays().indexOf(date), dept = store.get("kz_dept");
+  const noDepts = !S.depts.length;
+  showDlg("Нове бронювання", `${DAYS[k]} ${dm(date)} · з ${tm(i)}`, `
+    <div class="fld"><label class="req" for="b-dept">Департамент</label>
+      <select id="b-dept" ${noDepts ? "disabled" : ""}><option value="">${noDepts ? "Список ще не заповнено" : "— оберіть департамент"}</option>${S.depts.map(x => `<option ${x === dept ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>
+      ${noDepts ? '<span class="hint">Адміністратор ще не заповнив довідник департаментів.</span>' : ""}</div>
+    <div class="fld"><label class="req" for="b-name">Ім'я та прізвище</label><input id="b-name" maxlength="80" autocomplete="name" value="${esc(store.get("kz_name"))}"></div>
+    <div class="fld"><label class="req" for="b-type">Тип зустрічі</label>
+      <select id="b-type"><option value="">— оберіть тип</option>${S.types.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join("")}</select></div>
+    <div class="grid2">
+      <div class="fld"><label class="req" for="b-dur">Тривалість</label><select id="b-dur"><option value="2"></option></select></div>
+      <div class="fld"><label class="req" for="b-pin">PIN-код (4 цифри)</label><input id="b-pin" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+    </div>
+    <span class="hint" id="dur-hint"></span>
+    <div class="fld"><label for="b-note">Коментар</label><input id="b-note" maxlength="150" placeholder="Необов'язково: напр. назва постачальника"></div>
+    <span class="hint">PIN знадобиться, щоб скасувати це бронювання. Запам'ятайте його.</span>`,
+    `<button class="btn pri" data-act="submit" data-busy>Забронювати</button>`);
+  durOptions();
+  (!$("#b-dept").value && !noDepts ? $("#b-dept") : !$("#b-name").value ? $("#b-name") : $("#b-type")).focus();
+}
+function openView(id) {
+  const b = S.bookings.find(x => x.id === id); if (!b) return;
+  S.dlg = { mode: "view", id };
+  const k = weekDays().indexOf(b.date);
+  showDlg(titleOf(b), `${DAYS[k]} ${dm(b.date)} · ${span(b)}`, `
+    <div class="info"><b>${esc(b.dept) || "—"}</b><span>${esc(b.name) || "—"}</span>${b.note ? `<span>${esc(b.note)}</span>` : ""}</div>
+    ${b.cancellable ? `<div class="fld"><label for="c-pin">PIN-код, щоб скасувати</label><input id="c-pin" inputmode="numeric" maxlength="4" autocomplete="off">
+      <span class="hint">Скасувати може лише той, хто бронював.</span></div>` : '<span class="hint">Це бронювання внесено адміністратором — скасувати його може лише він.</span>'}`,
+    b.cancellable ? `<button class="btn danger" data-act="cancel" data-busy>Скасувати бронювання</button>` : "", colorOf(b));
+}
+function showDlg(title, sub, body, action, color) {
+  $("#modal").innerHTML = `<div class="scrim"><div class="dlg" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+    <div class="dlg-h" style="--hc:${color || "var(--brand)"}"><div><span class="mono">${esc(sub)}</span><h2>${esc(title)}</h2></div><button class="ib" data-act="close" aria-label="Закрити">✕</button></div>
+    <div class="dlg-b">${body}<div class="err" id="dlg-err" role="alert" hidden></div>
+    <div class="acts"><button class="btn" data-act="close">Закрити</button>${action}</div></div></div></div>`;
+}
+function closeDlg() { S.dlg = null; $("#modal").innerHTML = ""; }
+function dlgErr(t) { const e = $("#dlg-err"); if (e) { e.textContent = t; e.hidden = false; } else toast(t); }
+
+function submit() {
+  const d = S.dlg, v = id => $(id).value.trim();
+  const dept = v("#b-dept"), name = v("#b-name"), type = v("#b-type"), pin = v("#b-pin"), note = v("#b-note"), len = Number($("#b-dur").value);
+  if (!dept) return dlgErr("Оберіть департамент.");
+  if (!name) return dlgErr("Вкажіть ім'я та прізвище.");
+  if (!type) return dlgErr("Оберіть тип зустрічі.");
+  if (!/^\d{4}$/.test(pin)) return dlgErr("PIN-код має складатися з 4 цифр.");
+  setBusy(true);
+  call("book", { date: d.date, start: d.i, len, dept, name, type, note, pin, from: S.from })
+    .then(st => { store.set("kz_name", name); store.set("kz_dept", dept); closeDlg(); apply(st); toast("Заброньовано: " + tm(d.i) + "–" + tm(d.i + len)); })
+    .catch(e => { if (e.message === "NO_ACCESS") return showLogin("Пароль змінився — введіть новий."); dlgErr(e.message); load(true); })
+    .finally(() => setBusy(false));
+}
+function cancelBooking() {
+  const pin = $("#c-pin").value.trim();
+  if (!/^\d{4}$/.test(pin)) return dlgErr("Введіть PIN-код із 4 цифр.");
+  setBusy(true);
+  call("cancel", { id: S.dlg.id, pin, from: S.from })
+    .then(st => { closeDlg(); apply(st); toast("Бронювання скасовано"); })
+    .catch(e => { if (e.message === "NO_ACCESS") return showLogin("Пароль змінився — введіть новий."); dlgErr(e.message); })
+    .finally(() => setBusy(false));
+}
+
+/* ---------- події ---------- */
+function goWeek(from) { S.from = from; S.day = ""; render(); load(); }
+$("#prev").addEventListener("click", () => goWeek(addDays(S.from, -7)));
+$("#next").addEventListener("click", () => goWeek(addDays(S.from, 7)));
+$("#thisWeek").addEventListener("click", () => goWeek(weekOf(S.now ? S.now.date : localToday())));
+document.addEventListener("click", e => {
+  const a = e.target.closest("[data-act]");
+  if (a) { const k = a.dataset.act; if (k === "close") closeDlg(); if (k === "submit") submit(); if (k === "cancel") cancelBooking(); if (k === "retry" && API_URL) load(); return; }
+  if (e.target.classList && e.target.classList.contains("scrim")) { closeDlg(); return; }
+  const day = e.target.closest("[data-day]"); if (day) { S.day = day.dataset.day; render(); return; }
+  const free = e.target.closest("[data-d]"); if (free) { openNew(free.dataset.d, Number(free.dataset.i)); return; }
+  const busy = e.target.closest("[data-id]"); if (busy) openView(busy.dataset.id);
+});
+document.addEventListener("submit", e => { if (e.target.id === "login") login(e); });
+document.addEventListener("change", e => { if (e.target.id === "b-type") durOptions(); });
+document.addEventListener("input", e => { if (e.target.id === "b-pin" || e.target.id === "c-pin") e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && S.dlg) closeDlg();
+  if (e.key === "Enter" && S.dlg && e.target.tagName === "INPUT") { e.preventDefault(); S.dlg.mode === "new" ? submit() : cancelBooking(); }
+});
+let _mq = isMobile(); window.addEventListener("resize", () => { const m = isMobile(); if (m !== _mq) { _mq = m; render(); } });
+// тихе оновлення раз на 2 хв, поки вікно бронювання закрите
+setInterval(() => { if (API_URL && S.loaded && !S.dlg && !S.busy && !document.hidden) load(true); }, 120000);
+document.addEventListener("visibilitychange", () => { if (API_URL && S.loaded && !S.dlg && !document.hidden) load(true); });
+
+S.from = weekOf(localToday());
+$("#weekLabel").textContent = weekLabel();
+if (!API_URL) gate("Сайт ще не підключено", "У файлі index.html не вказано адресу сервера (API_URL). Вставте адресу веб-застосунку Apps Script, що закінчується на /exec.");
+else if (!store.get("kz_key")) showLogin();
+else load();
+</script>
+<style>
+.sig{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin-top:-44px;padding:0 16px calc(18px + env(safe-area-inset-bottom,0px));font-size:11.5px;color:var(--muted);opacity:.75}
+.sig b{font-family:var(--f-mono);font-weight:500;letter-spacing:.02em}
+</style>
+<footer class="sig" title="Rozvalova + Claude"><b>RozvalovAI</b><span id="sigVer"></span></footer>
+<script>
+(function () {
+  var el = document.getElementById("sigVer"), app = document.getElementById("app");
+  function upd() { try { if (typeof S !== "undefined" && S.version) el.textContent = "· v" + S.version; } catch (e) { } }
+  upd();
+  if (app && window.MutationObserver) new MutationObserver(upd).observe(app, { childList: true });
+})();
+</script>
+</body>
+</html>
