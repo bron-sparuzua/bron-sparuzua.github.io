@@ -354,8 +354,8 @@ function openNew(date, i) {
         ${S.depts.map(x => `<label class="chk"><input type="checkbox" class="dp-i" value="${esc(x)}" ${saved.indexOf(x) >= 0 ? "checked" : ""}> ${esc(x)}</label>`).join("")}</div></details>
       <span class="hint">Можна обрати кілька, наприклад для спільних зборів.</span>`}</div>
     <div class="fld"><label class="req" for="b-name">Ім'я та прізвище</label><input id="b-name" maxlength="80" autocomplete="name" value="${esc(store.get("kz_name"))}"></div>
-    <div class="fld"><label for="b-email">Пошта для сповіщень</label><input id="b-email" type="email" maxlength="100" autocomplete="email" placeholder="name@spar.uz.ua" value="${esc(store.get("kz_email"))}">
-      <span class="hint">Необов'язково. Надішлемо підтвердження і напишемо, якщо бронювання скасують.</span></div>
+    <div class="fld"><label for="b-email">Пошта для сповіщень</label><input id="b-email" type="text" inputmode="email" maxlength="600" autocomplete="email" placeholder="name@spar.uz.ua, kolega@spar.uz.ua" value="${esc(store.get("kz_email"))}">
+      <span class="hint">Необов'язково. Можна кілька адрес через кому (до 10), наприклад керівників обраних департаментів. Кожен отримає підтвердження і лист, якщо бронювання скасують.</span></div>
     <div class="fld"><label class="req" for="b-type">Тип зустрічі</label>
       <select id="b-type"><option value="">— оберіть тип</option>${S.types.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join("")}</select></div>
     <div class="grid2">
@@ -411,7 +411,9 @@ function submit() {
   if ($("#b-rep").checked && (!repeatUntil || repeatUntil < addDays(d.date, 7))) return dlgErr("Оберіть останній день повторення — щонайменше через тиждень.");
   if (!depts.length) return dlgErr("Оберіть хоча б один департамент.");
   if (!name) return dlgErr("Вкажіть ім'я та прізвище.");
-  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return dlgErr("Перевірте адресу пошти.");
+  const mails = email.split(/[\s,;]+/).filter(Boolean), badMail = mails.filter(e => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e));
+  if (badMail.length) return dlgErr("Перевірте адресу пошти: " + badMail.join(", "));
+  if (mails.length > 10) return dlgErr("Щонайбільше 10 адрес пошти.");
   if (!type) return dlgErr("Оберіть тип зустрічі.");
   if (!/^\d{4}$/.test(pin)) return dlgErr("PIN-код має складатися з 4 цифр.");
   setBusy(true);
