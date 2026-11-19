@@ -129,6 +129,9 @@ h2{font-size:16px;margin:0 0 10px}
 .fld input:focus,.fld select:focus{border-color:var(--brand);outline:none;box-shadow:0 0 0 3px var(--brand-soft)}
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .req::after{content:" *";color:var(--danger)}
+.chk{display:flex;align-items:center;gap:10px;font-weight:700;font-size:13px;min-height:44px;cursor:pointer}
+.chk input{width:20px;height:20px;accent-color:var(--brand);margin:0}
+.rep{border:1px dashed var(--line);border-radius:12px;padding:4px 12px 12px;display:grid;gap:8px}
 .hint{font-size:12px;color:var(--muted)}
 .info{border-radius:12px;padding:12px;background:var(--surface-2);display:grid;gap:4px}
 .info b{overflow-wrap:anywhere}
@@ -259,7 +262,7 @@ function weekLabel() {
     ? a.getUTCDate() + "–" + z.getUTCDate() + " " + MONTHS[a.getUTCMonth()] + " " + z.getUTCFullYear()
     : a.getUTCDate() + " " + MONTHS[a.getUTCMonth()] + " – " + z.getUTCDate() + " " + MONTHS[z.getUTCMonth()] + " " + z.getUTCFullYear();
 }
-const titleOf = b => b.type || "Зустріч";
+const titleOf = b => (b.series ? "↻ " : "") + (b.type || "Зустріч");
 const whoOf = b => [b.dept, b.name].filter(Boolean).join(" · ");
 
 /* ---------- екран ---------- */
@@ -320,6 +323,9 @@ function durOptions() {
   const tip = $("#dur-hint");
   if (t) tip.textContent = max < t.maxSlots ? `Далі зал зайнятий або закінчується робочий день, тому довше ${durLabel(max)} не вийде.` : `«${t.name}» — до ${durLabel(t.maxSlots)}.`;
   else tip.textContent = "";
+  const rep = !!(t && t.repeat);
+  $("#rep-box").hidden = !rep;
+  if (!rep) { $("#b-rep").checked = false; $("#rep-until-box").hidden = true; }
   const h = $(".dlg-h"); if (h) h.style.setProperty("--hc", t ? t.color : "var(--brand)");
 }
 function openNew(date, i) {
@@ -339,10 +345,17 @@ function openNew(date, i) {
       <div class="fld"><label class="req" for="b-pin">PIN-код (4 цифри)</label><input id="b-pin" inputmode="numeric" maxlength="4" autocomplete="off"></div>
     </div>
     <span class="hint" id="dur-hint"></span>
+    <div class="rep" id="rep-box" hidden>
+      <label class="chk"><input type="checkbox" id="b-rep"> Повторювати щотижня</label>
+      <div class="fld" id="rep-until-box" hidden><label for="b-until">Останній день повторення</label><input type="date" id="b-until">
+        <span class="hint">Зустріч буде щотижня в цей день і час. Тижні, де зал уже зайнятий, пропустимо й покажемо які.</span></div>
+    </div>
     <div class="fld"><label for="b-note">Коментар</label><input id="b-note" maxlength="150" placeholder="Необов'язково: напр. назва постачальника"></div>
     <span class="hint">PIN знадобиться, щоб скасувати це бронювання. Запам'ятайте його.</span>`,
     `<button class="btn pri" data-act="submit" data-busy>Забронювати</button>`);
   durOptions();
+  const lim = addDays(S.now.date, 365), def = addDays(date, 7 * 12);
+  $("#b-until").min = addDays(date, 7); $("#b-until").max = lim; $("#b-until").value = def > lim ? lim : def;
   (!$("#b-dept").value && !noDepts ? $("#b-dept") : !$("#b-name").value ? $("#b-name") : $("#b-type")).focus();
 }
 function openView(id) {
@@ -350,10 +363,11 @@ function openView(id) {
   S.dlg = { mode: "view", id };
   const k = weekDays().indexOf(b.date);
   showDlg(titleOf(b), `${DAYS[k]} ${dm(b.date)} · ${span(b)}`, `
-    <div class="info"><b>${esc(b.dept) || "—"}</b><span>${esc(b.name) || "—"}</span>${b.note ? `<span>${esc(b.note)}</span>` : ""}</div>
+    <div class="info"><b>${esc(b.dept) || "—"}</b><span>${esc(b.name) || "—"}</span>${b.note ? `<span>${esc(b.note)}</span>` : ""}${b.series ? "<span>Щотижнева серія: можна скасувати лише цю зустріч або цю і всі наступні.</span>" : ""}</div>
     <div class="fld"><label for="c-pin">${b.cancellable ? "PIN-код, щоб скасувати" : "Код адміністратора, щоб скасувати"}</label><input id="c-pin" type="password" maxlength="40" autocomplete="off" autocapitalize="characters" spellcheck="false">
       <span class="hint">${b.cancellable ? "Скасувати може той, хто бронював, або адміністратор своїм кодом." : "Це бронювання внесено адміністратором — скасувати його може лише він."}</span></div>`,
-    `<button class="btn danger" data-act="cancel" data-busy>Скасувати бронювання</button>`, colorOf(b));
+    b.series ? `<button class="btn danger" data-act="cancel" data-busy>Скасувати цю</button><button class="btn danger" data-act="cancel-future" data-busy>Цю і наступні</button>`
+      : `<button class="btn danger" data-act="cancel" data-busy>Скасувати бронювання</button>`, colorOf(b));
 }
 function showDlg(title, sub, body, action, color) {
   $("#modal").innerHTML = `<div class="scrim"><div class="dlg" role="dialog" aria-modal="true" aria-label="${esc(title)}">
@@ -367,22 +381,32 @@ function dlgErr(t) { const e = $("#dlg-err"); if (e) { e.textContent = t; e.hidd
 function submit() {
   const d = S.dlg, v = id => $(id).value.trim();
   const dept = v("#b-dept"), name = v("#b-name"), type = v("#b-type"), pin = v("#b-pin"), note = v("#b-note"), len = Number($("#b-dur").value);
+  const repeatUntil = $("#b-rep").checked ? v("#b-until") : "";
+  if ($("#b-rep").checked && (!repeatUntil || repeatUntil < addDays(d.date, 7))) return dlgErr("Оберіть останній день повторення — щонайменше через тиждень.");
   if (!dept) return dlgErr("Оберіть департамент.");
   if (!name) return dlgErr("Вкажіть ім'я та прізвище.");
   if (!type) return dlgErr("Оберіть тип зустрічі.");
   if (!/^\d{4}$/.test(pin)) return dlgErr("PIN-код має складатися з 4 цифр.");
   setBusy(true);
-  call("book", { date: d.date, start: d.i, len, dept, name, type, note, pin, from: S.from })
-    .then(st => { store.set("kz_name", name); store.set("kz_dept", dept); closeDlg(); apply(st); toast("Заброньовано: " + tm(d.i) + "–" + tm(d.i + len)); })
+  call("book", { date: d.date, start: d.i, len, dept, name, type, note, pin, repeatUntil, from: S.from })
+    .then(st => {
+      store.set("kz_name", name); store.set("kz_dept", dept); closeDlg(); apply(st);
+      const when = tm(d.i) + "–" + tm(d.i + len);
+      if (!repeatUntil) return toast("Заброньовано: " + when);
+      const sk = st.skipped || [];
+      if (!sk.length) return toast("Заброньовано щотижня, " + when + ": зустрічей — " + st.created);
+      S.dlg = { mode: "info" };
+      showDlg("Серію заброньовано", when, `<div class="info"><b>Заброньовано зустрічей: ${st.created}</b><span>Ці тижні пропущено, бо зал уже зайнятий: ${sk.map(x => dm(x)).join(", ")}.</span></div>`, "");
+    })
     .catch(e => { if (e.message === "NO_ACCESS") return showLogin("Пароль змінився — введіть новий."); dlgErr(e.message); load(true); })
     .finally(() => setBusy(false));
 }
-function cancelBooking() {
+function cancelBooking(scope) {
   const pin = $("#c-pin").value.trim();
   if (!pin) return dlgErr("Введіть PIN-код.");
   setBusy(true);
-  call("cancel", { id: S.dlg.id, pin, from: S.from })
-    .then(st => { closeDlg(); apply(st); toast("Бронювання скасовано"); })
+  call("cancel", { id: S.dlg.id, pin, scope: scope || "one", from: S.from })
+    .then(st => { closeDlg(); apply(st); toast(st.removed > 1 ? "Скасовано зустрічей: " + st.removed : "Бронювання скасовано"); })
     .catch(e => { if (e.message === "NO_ACCESS") return showLogin("Пароль змінився — введіть новий."); dlgErr(e.message); })
     .finally(() => setBusy(false));
 }
@@ -394,18 +418,18 @@ $("#next").addEventListener("click", () => goWeek(addDays(S.from, 7)));
 $("#thisWeek").addEventListener("click", () => goWeek(weekOf(S.now ? S.now.date : localToday())));
 document.addEventListener("click", e => {
   const a = e.target.closest("[data-act]");
-  if (a) { const k = a.dataset.act; if (k === "close") closeDlg(); if (k === "submit") submit(); if (k === "cancel") cancelBooking(); if (k === "retry" && API_URL) load(); return; }
+  if (a) { const k = a.dataset.act; if (k === "close") closeDlg(); if (k === "submit") submit(); if (k === "cancel") cancelBooking(); if (k === "cancel-future") cancelBooking("future"); if (k === "retry" && API_URL) load(); return; }
   if (e.target.classList && e.target.classList.contains("scrim")) { closeDlg(); return; }
   const day = e.target.closest("[data-day]"); if (day) { S.day = day.dataset.day; render(); return; }
   const free = e.target.closest("[data-d]"); if (free) { openNew(free.dataset.d, Number(free.dataset.i)); return; }
   const busy = e.target.closest("[data-id]"); if (busy) openView(busy.dataset.id);
 });
 document.addEventListener("submit", e => { if (e.target.id === "login") login(e); });
-document.addEventListener("change", e => { if (e.target.id === "b-type") durOptions(); });
+document.addEventListener("change", e => { if (e.target.id === "b-type") durOptions(); if (e.target.id === "b-rep") $("#rep-until-box").hidden = !e.target.checked; });
 document.addEventListener("input", e => { if (e.target.id === "b-pin") e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4); });
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && S.dlg) closeDlg();
-  if (e.key === "Enter" && S.dlg && e.target.tagName === "INPUT") { e.preventDefault(); S.dlg.mode === "new" ? submit() : cancelBooking(); }
+  if (e.key === "Enter" && S.dlg && e.target.tagName === "INPUT") { e.preventDefault(); if (S.dlg.mode === "new") submit(); else if (S.dlg.mode === "view") cancelBooking(); }
 });
 let _mq = isMobile(); window.addEventListener("resize", () => { const m = isMobile(); if (m !== _mq) { _mq = m; render(); } });
 // тихе оновлення раз на 2 хв, поки вікно бронювання закрите
