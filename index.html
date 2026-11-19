@@ -132,6 +132,16 @@ h2{font-size:16px;margin:0 0 10px}
 .chk{display:flex;align-items:center;gap:10px;font-weight:700;font-size:13px;min-height:44px;cursor:pointer}
 .chk input{width:20px;height:20px;accent-color:var(--brand);margin:0}
 .rep{border:1px dashed var(--line);border-radius:12px;padding:4px 12px 12px;display:grid;gap:8px}
+.dp{border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}
+.dp summary{min-height:44px;padding:10px 12px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
+.dp summary::-webkit-details-marker{display:none}
+.dp summary::after{content:"▾";margin-left:auto;color:var(--muted)}
+.dp[open] summary{border-bottom:1px solid var(--line)}
+.dp summary span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dp-list{max-height:220px;overflow:auto;padding:4px 12px;display:grid}
+.dp-list .chk{font-weight:500;min-height:38px}
+.dp-list .chk.all{font-weight:700;border-bottom:1px solid var(--line)}
+.lbl{font-weight:700;font-size:13px}
 .hint{font-size:12px;color:var(--muted)}
 .info{border-radius:12px;padding:12px;background:var(--surface-2);display:grid;gap:4px}
 .info b{overflow-wrap:anywhere}
@@ -263,7 +273,9 @@ function weekLabel() {
     : a.getUTCDate() + " " + MONTHS[a.getUTCMonth()] + " – " + z.getUTCDate() + " " + MONTHS[z.getUTCMonth()] + " " + z.getUTCFullYear();
 }
 const titleOf = b => (b.series ? "↻ " : "") + (b.type || "Зустріч");
-const whoOf = b => [b.dept, b.name].filter(Boolean).join(" · ");
+const deptsOf = b => String(b.dept || "").split("; ").filter(Boolean);
+const deptLabel = b => { const d = deptsOf(b); return d.length > 1 && d.length >= S.depts.length ? "Уся компанія" : d.length > 1 ? d[0] + " +" + (d.length - 1) : (d[0] || ""); };
+const whoOf = b => [deptLabel(b), b.name].filter(Boolean).join(" · ");
 
 /* ---------- екран ---------- */
 function render() {
@@ -297,7 +309,7 @@ function render() {
         const b = bookingAt(x, i), past = isPast(x, i);
         if (b) {
           const first = b.start === i, h = 44 * b.len - 4;
-          g += `<button class="c busy" data-id="${esc(b.id)}" aria-label="${esc(titleOf(b))}: ${DAYS[k]} ${dm(x)}, ${span(b)}, ${esc(whoOf(b))}" ${first ? "" : 'tabindex="-1"'}>${first ? `<span class="blk ${isPast(x, b.start + b.len - 1) ? "past" : ""}" style="--tc:${colorOf(b)};height:${h}px"><span class="t">${esc(titleOf(b))}</span><span class="s">${span(b)}${b.len > 1 ? "" : " · " + esc(b.dept)}</span>${b.len > 1 ? `<span class="s">${esc(whoOf(b))}</span>` : ""}</span>` : ""}</button>`;
+          g += `<button class="c busy" data-id="${esc(b.id)}" aria-label="${esc(titleOf(b))}: ${DAYS[k]} ${dm(x)}, ${span(b)}, ${esc(whoOf(b))}" ${first ? "" : 'tabindex="-1"'}>${first ? `<span class="blk ${isPast(x, b.start + b.len - 1) ? "past" : ""}" style="--tc:${colorOf(b)};height:${h}px"><span class="t">${esc(titleOf(b))}</span><span class="s">${span(b)}${b.len > 1 ? "" : " · " + esc(deptLabel(b))}</span>${b.len > 1 ? `<span class="s">${esc(whoOf(b))}</span>` : ""}</span>` : ""}</button>`;
         }
         else if (past) g += `<button class="c past" disabled aria-label="Час минув: ${DAYS[k]} ${dm(x)}, ${tm(i)}"></button>`;
         else g += `<button class="c free" data-d="${x}" data-i="${i}" aria-label="Вільно: ${DAYS[k]} ${dm(x)}, ${tm(i)} — забронювати"></button>`;
@@ -331,13 +343,19 @@ function durOptions() {
 function openNew(date, i) {
   if (!freeRun(date, i, 1)) return;
   S.dlg = { mode: "new", date, i };
-  const k = weekDays().indexOf(date), dept = store.get("kz_dept");
+  const k = weekDays().indexOf(date);
+  let saved = []; try { saved = JSON.parse(store.get("kz_depts") || "[]"); } catch (e) { }
+  if (!saved.length && store.get("kz_dept")) saved = [store.get("kz_dept")];
   const noDepts = !S.depts.length;
   showDlg("Нове бронювання", `${DAYS[k]} ${dm(date)} · з ${tm(i)}`, `
-    <div class="fld"><label class="req" for="b-dept">Департамент</label>
-      <select id="b-dept" ${noDepts ? "disabled" : ""}><option value="">${noDepts ? "Список ще не заповнено" : "— оберіть департамент"}</option>${S.depts.map(x => `<option ${x === dept ? "selected" : ""}>${esc(x)}</option>`).join("")}</select>
-      ${noDepts ? '<span class="hint">Адміністратор ще не заповнив довідник департаментів.</span>' : ""}</div>
+    <div class="fld"><span class="lbl req">Департаменти</span>
+      ${noDepts ? '<span class="hint">Адміністратор ще не заповнив довідник департаментів.</span>' : `<details class="dp" id="b-dept"><summary><span id="dp-sum"></span></summary><div class="dp-list">
+        <label class="chk all"><input type="checkbox" id="dp-all"> Усі департаменти</label>
+        ${S.depts.map(x => `<label class="chk"><input type="checkbox" class="dp-i" value="${esc(x)}" ${saved.indexOf(x) >= 0 ? "checked" : ""}> ${esc(x)}</label>`).join("")}</div></details>
+      <span class="hint">Можна обрати кілька, наприклад для спільних зборів.</span>`}</div>
     <div class="fld"><label class="req" for="b-name">Ім'я та прізвище</label><input id="b-name" maxlength="80" autocomplete="name" value="${esc(store.get("kz_name"))}"></div>
+    <div class="fld"><label for="b-email">Пошта для сповіщень</label><input id="b-email" type="email" maxlength="100" autocomplete="email" placeholder="name@spar.uz.ua" value="${esc(store.get("kz_email"))}">
+      <span class="hint">Необов'язково. Надішлемо підтвердження і напишемо, якщо бронювання скасують.</span></div>
     <div class="fld"><label class="req" for="b-type">Тип зустрічі</label>
       <select id="b-type"><option value="">— оберіть тип</option>${S.types.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join("")}</select></div>
     <div class="grid2">
@@ -356,14 +374,15 @@ function openNew(date, i) {
   durOptions();
   const lim = addDays(S.now.date, 365), def = addDays(date, 7 * 12);
   $("#b-until").min = addDays(date, 7); $("#b-until").max = lim; $("#b-until").value = def > lim ? lim : def;
-  (!$("#b-dept").value && !noDepts ? $("#b-dept") : !$("#b-name").value ? $("#b-name") : $("#b-type")).focus();
+  dpSync();
+  (!pickedDepts().length && !noDepts ? $("#b-dept summary") : !$("#b-name").value ? $("#b-name") : $("#b-type")).focus();
 }
 function openView(id) {
   const b = S.bookings.find(x => x.id === id); if (!b) return;
   S.dlg = { mode: "view", id };
   const k = weekDays().indexOf(b.date);
   showDlg(titleOf(b), `${DAYS[k]} ${dm(b.date)} · ${span(b)}`, `
-    <div class="info"><b>${esc(b.dept) || "—"}</b><span>${esc(b.name) || "—"}</span>${b.note ? `<span>${esc(b.note)}</span>` : ""}${b.series ? "<span>Щотижнева серія: можна скасувати лише цю зустріч або цю і всі наступні.</span>" : ""}</div>
+    <div class="info"><b>${deptsOf(b).length > 1 && deptsOf(b).length >= S.depts.length ? "Уся компанія" : esc(deptsOf(b).join(", ")) || "—"}</b><span>${esc(b.name) || "—"}</span>${b.note ? `<span>${esc(b.note)}</span>` : ""}${b.series ? "<span>Щотижнева серія: можна скасувати лише цю зустріч або цю і всі наступні.</span>" : ""}</div>
     <div class="fld"><label for="c-pin">${b.cancellable ? "PIN-код, щоб скасувати" : "Код адміністратора, щоб скасувати"}</label><input id="c-pin" type="password" maxlength="40" autocomplete="off" autocapitalize="characters" spellcheck="false">
       <span class="hint">${b.cancellable ? "Скасувати може той, хто бронював, або адміністратор своїм кодом." : "Це бронювання внесено адміністратором — скасувати його може лише він."}</span></div>`,
     b.series ? `<button class="btn danger" data-act="cancel" data-busy>Скасувати цю</button><button class="btn danger" data-act="cancel-future" data-busy>Цю і наступні</button>`
@@ -378,19 +397,27 @@ function showDlg(title, sub, body, action, color) {
 function closeDlg() { S.dlg = null; $("#modal").innerHTML = ""; }
 function dlgErr(t) { const e = $("#dlg-err"); if (e) { e.textContent = t; e.hidden = false; } else toast(t); }
 
+const pickedDepts = () => [...document.querySelectorAll(".dp-i:checked")].map(x => x.value);
+function dpSync() {
+  const sum = $("#dp-sum"); if (!sum) return;
+  const p = pickedDepts(), all = $("#dp-all");
+  all.checked = p.length === S.depts.length; all.indeterminate = p.length > 0 && p.length < S.depts.length;
+  sum.textContent = !p.length ? "— оберіть департаменти" : p.length === S.depts.length ? "Усі департаменти" : p.length === 1 ? p[0] : p[0] + " та ще " + (p.length - 1);
+}
 function submit() {
   const d = S.dlg, v = id => $(id).value.trim();
-  const dept = v("#b-dept"), name = v("#b-name"), type = v("#b-type"), pin = v("#b-pin"), note = v("#b-note"), len = Number($("#b-dur").value);
+  const depts = pickedDepts(), email = v("#b-email"), name = v("#b-name"), type = v("#b-type"), pin = v("#b-pin"), note = v("#b-note"), len = Number($("#b-dur").value);
   const repeatUntil = $("#b-rep").checked ? v("#b-until") : "";
   if ($("#b-rep").checked && (!repeatUntil || repeatUntil < addDays(d.date, 7))) return dlgErr("Оберіть останній день повторення — щонайменше через тиждень.");
-  if (!dept) return dlgErr("Оберіть департамент.");
+  if (!depts.length) return dlgErr("Оберіть хоча б один департамент.");
   if (!name) return dlgErr("Вкажіть ім'я та прізвище.");
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return dlgErr("Перевірте адресу пошти.");
   if (!type) return dlgErr("Оберіть тип зустрічі.");
   if (!/^\d{4}$/.test(pin)) return dlgErr("PIN-код має складатися з 4 цифр.");
   setBusy(true);
-  call("book", { date: d.date, start: d.i, len, dept, name, type, note, pin, repeatUntil, from: S.from })
+  call("book", { date: d.date, start: d.i, len, depts, email, name, type, note, pin, repeatUntil, from: S.from })
     .then(st => {
-      store.set("kz_name", name); store.set("kz_dept", dept); closeDlg(); apply(st);
+      store.set("kz_name", name); store.set("kz_depts", JSON.stringify(depts)); store.set("kz_email", email); closeDlg(); apply(st);
       const when = tm(d.i) + "–" + tm(d.i + len);
       if (!repeatUntil) return toast("Заброньовано: " + when);
       const sk = st.skipped || [];
@@ -425,7 +452,7 @@ document.addEventListener("click", e => {
   const busy = e.target.closest("[data-id]"); if (busy) openView(busy.dataset.id);
 });
 document.addEventListener("submit", e => { if (e.target.id === "login") login(e); });
-document.addEventListener("change", e => { if (e.target.id === "b-type") durOptions(); if (e.target.id === "b-rep") $("#rep-until-box").hidden = !e.target.checked; });
+document.addEventListener("change", e => { if (e.target.id === "dp-all") { document.querySelectorAll(".dp-i").forEach(x => x.checked = e.target.checked); dpSync(); } if (e.target.classList && e.target.classList.contains("dp-i")) dpSync(); if (e.target.id === "b-type") durOptions(); if (e.target.id === "b-rep") $("#rep-until-box").hidden = !e.target.checked; });
 document.addEventListener("input", e => { if (e.target.id === "b-pin") e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4); });
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && S.dlg) closeDlg();
